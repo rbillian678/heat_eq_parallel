@@ -245,7 +245,7 @@ Metrics collected:
 
 The implicit solver uses Backward Euler time stepping, which results in a linear system at each time step:
 
-$$ (I - \Delta t\, A)\, u^{m+1} = u^m $$
+$$ (I - \Delta t\ A)\ u^{m+1} = u^m $$
 
 where A is the discrete 2D Laplacian operator over the interior grid points.
 
