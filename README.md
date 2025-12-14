@@ -146,24 +146,17 @@ Boundary values are fixed for all \( t \) and excluded from the implicit linear 
 
 Backward Euler time discretization yields
 
-\[
-\frac{u^{m+1} - u^m}{\Delta t} = A u^{m+1},
-\]
+$$ \frac{u^{m+1} - u^m}{\Delta t} = A u^{m+1} $$
 
 which can be written as the linear system
 
-\[
-(I - \Delta t\, A)\, u^{m+1} = u^m,
-\]
+$$ (I - \Delta t\, A)\, u^{m+1} = u^m $$
 
-where \( A \) is the discrete 2D Laplacian over interior grid points.
+where A is the discrete 2D Laplacian over interior grid points.
 
 Define
 
-\[
-\lambda_x = \frac{\Delta t}{(\Delta x)^2}, \qquad
-\lambda_y = \frac{\Delta t}{(\Delta y)^2}.
-\]
+$$ \lambda_x = \frac{\Delta t}{(\Delta x)^2}, \qquad \lambda_y = \frac{\Delta t}{(\Delta y)^2} $$
 
 The resulting sparse matrix has:
 
