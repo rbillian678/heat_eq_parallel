@@ -7,7 +7,6 @@
 // holds params
 namespace data
 {
-    // need to figure out how to present. Want to set explicit and implicit error equal or not anymore
     constexpr double T{0.1}, dx{1.0 / 512}, dy{1.0 / 512}, dt{1.5e-5}, alpha{1};
     constexpr int xMin{0}, xMax{1}, yMin{0}, yMax{1};
     const int numTimeSteps{static_cast<int>(T / dt)}, numXSteps{static_cast<int>((xMax - xMin) / dx) + 1}, numYSteps{static_cast<int>((yMax - yMin) / dy) + 1};
