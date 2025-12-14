@@ -119,7 +119,7 @@ $$
 The animation below shows the time evolution of the temperature field for the explicit FTCS scheme on a \(512 \times 512\) grid with zero Dirichlet boundary conditions.
 
 <p align="center">
-  <img src="heat/heat.gif" width="520">
+  <img src="data/heat.gif" width="520">
 </p>
 
 This visualization provides qualitative validation, demonstrating diffusion-driven smoothing and decay toward the steady state.
@@ -252,3 +252,8 @@ Metrics collected:
 - Scaling with grid size
 
 ---
+## Performance Comparison
+
+The following bar plot shows the runtime comparison across different solver implementations. Comparisons should be made in terms of method
+
+![Runtime Bar Plot](data/plot.png)
