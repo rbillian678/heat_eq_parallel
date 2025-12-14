@@ -184,43 +184,29 @@ The system is symmetric positive definite and solved using Conjugate Gradient.
 
 ---
 
-## Conjugate Gradient (CG) Method
+### Conjugate Gradient (CG) Method
 
-To solve
+The implicit solver requires solving a large sparse linear system of the form:
 
-\[
-A x = b,
-\]
+A x = b
 
-the CG algorithm proceeds as follows:
+This system is solved using the Conjugate Gradient (CG) method, which is well-suited for symmetric positive definite matrices such as those arising from the discretized 2D Laplacian.
 
-**Initialization**
-\[
-x_0 = 0, \quad r_0 = b - A x_0, \quad p_0 = r_0
-\]
+**Algorithm**
 
-**Iteration**
-\[
-\alpha_k = \frac{r_k^T r_k}{p_k^T A p_k}
-\]
+Initialization:
+- x₀ = 0
+- r₀ = b − A x₀
+- p₀ = r₀
 
-\[
-x_{k+1} = x_k + \alpha_k p_k
-\]
+Iteration:
+- αₖ = (rₖᵀ rₖ) / (pₖᵀ A pₖ)
+- xₖ₊₁ = xₖ + αₖ pₖ
+- rₖ₊₁ = rₖ − αₖ A pₖ
+- βₖ = (rₖ₊₁ᵀ rₖ₊₁) / (rₖᵀ rₖ)
+- pₖ₊₁ = rₖ₊₁ + βₖ pₖ
 
-\[
-r_{k+1} = r_k - \alpha_k A p_k
-\]
-
-\[
-\beta_k = \frac{r_{k+1}^T r_{k+1}}{r_k^T r_k}
-\]
-
-\[
-p_{k+1} = r_{k+1} + \beta_k p_k
-\]
-
-Iterations continue until \( \|r_k\|_2 \) falls below a specified tolerance.
+Iterations continue until the L2 norm of the residual falls below a specified tolerance.
 
 ---
 
@@ -228,7 +214,7 @@ Iterations continue until \( \|r_k\|_2 \) falls below a specified tolerance.
 
 At final time $T = 0.1$, the error is computed as:
 
-$$ E_{L^2} = \left( \sum_{i,j} \left( u(x_i,y_j,T) - u_h(i,j,T) \right)^2 \, \Delta x \Delta y \right)^{1/2} $$
+$$ E_{L^2} = \left( \sum_{i,j} \left( u(x_i,y_j,T) - u_h(i,j,T) \right)^2 \ \Delta x \Delta y \right)^{1/2} $$
 
 where:
 - $u$ is the analytical solution  
@@ -257,22 +243,20 @@ Metrics collected:
 
 ### Stage 2 — Implicit Solver
 
-Use Backward Euler time stepping:
+The implicit solver uses Backward Euler time stepping, which results in a linear system at each time step:
 
-$$
-(I - \Delta t\, A)\, u^{m+1} = u^m
-$$
+$$ (I - \Delta t\, A)\, u^{m+1} = u^m $$
 
-Solve using Conjugate Gradient:
+where A is the discrete 2D Laplacian operator over the interior grid points.
 
-1. Serial CG  
-2. OpenMP-parallel CG  
+Each linear system is solved using the Conjugate Gradient (CG) method with the following implementations:
+1. Serial CG
+2. OpenMP-parallel CG
 
 Metrics collected:
-
-- Runtime  
-- \( L^2 \) error  
-- CG iteration counts  
-- Scaling with grid size  
+- Runtime
+- L2 error
+- CG iteration counts
+- Scaling with grid size
 
 ---
