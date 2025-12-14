@@ -161,17 +161,16 @@ $$ \lambda_x = \frac{\Delta t}{(\Delta x)^2}, \qquad \lambda_y = \frac{\Delta t}
 The resulting sparse matrix has:
 
 - Main diagonal:
-  \[
-  a = 1 + 2\lambda_x + 2\lambda_y
-  \]
+
+  $$ a = 1 + 2\lambda_x + 2\lambda_y $$
+
 - Off-diagonals (x-neighbors):
-  \[
-  -\lambda_x
-  \]
+
+  $$ -\lambda_x $$
+
 - Off-diagonals (y-neighbors):
-  \[
-  -\lambda_y
-  \]
+
+  $$ -\lambda_y $$
 
 The system is symmetric positive definite and solved using Conjugate Gradient.
 
