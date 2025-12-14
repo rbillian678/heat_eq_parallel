@@ -259,9 +259,9 @@ Metrics collected:
 
 Use Backward Euler time stepping:
 
-\[
-(I - \Delta t\, A)\, u^{m+1} = u^m.
-\]
+$$
+(I - \Delta t\, A)\, u^{m+1} = u^m
+$$
 
 Solve using Conjugate Gradient:
 
