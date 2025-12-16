@@ -3,37 +3,39 @@
 #include <iostream>
 #include <chrono>
 #include <iomanip>
+#include <omp.h>
 
 // holds params
 namespace data
 {
-    constexpr double T{0.1}, dx{1.0 / 512}, dy{1.0 / 512}, dt{1.5e-5}, alpha{1};
+    constexpr float T{0.1}, dx{1.0 / 512}, dy{1.0 / 512}, dt{1.5e-5}, alpha{1};
     constexpr int xMin{0}, xMax{1}, yMin{0}, yMax{1};
     const int numTimeSteps{static_cast<int>(T / dt)}, numXSteps{static_cast<int>((xMax - xMin) / dx) + 1}, numYSteps{static_cast<int>((yMax - yMin) / dy) + 1};
     const int Nx_int{numXSteps - 2}, Ny_int{numYSteps - 2};
-    constexpr double lambda_x = -data::alpha * data::dt / (data::dx * data::dx);
-    constexpr double lambda_y = -data::alpha * data::dt / (data::dy * data::dy);
-    constexpr double a = 1 - 2 * data::lambda_x - 2 * data::lambda_y;
+    constexpr float lambda_x = -data::alpha * data::dt / (data::dx * data::dx);
+    constexpr float lambda_y = -data::alpha * data::dt / (data::dy * data::dy);
+    constexpr float a = 1 - 2 * data::lambda_x - 2 * data::lambda_y;
 }
 
 // u(x, y, 0) = sin(pi* x) * sin(pi * y)
-double timeLowerBoundary(double x, double y)
+float timeLowerBoundary(float x, float y)
 {
     return sin(M_PI * (x * data::dx + data::xMin)) * sin(M_PI * (y * data::dy + data::yMin));
 }
 // compute Ax without building matrix
-void applyAMatrix(const std::vector<double> &x,
-                  std::vector<double> &y)
+void applyAMatrix(const std::vector<float> &x,
+                  std::vector<float> &y)
 {
     const int Nx = data::Nx_int;
     const int Ny = data::Ny_int;
 
+#pragma omp parallel for
     for (int j = 0; j < Ny; ++j)
     {
         const int row = j * Nx;
         for (int i = 0; i < Nx; ++i)
         {
-            double sum = data::a * x[row + i];
+            float sum = data::a * x[row + i];
             if (i > 0)
                 sum += data::lambda_x * x[row + (i - 1)];
             if (i + 1 < Nx)
@@ -47,9 +49,10 @@ void applyAMatrix(const std::vector<double> &x,
     }
 }
 // ans[i] = sum(x[i] * y[i]), for all i < n = x.size()
-double dotProduct(const std::vector<double> &a, const std::vector<double> &b)
+float dotProduct(const std::vector<float> &a, const std::vector<float> &b)
 {
-    double result = 0;
+    float result = 0;
+#pragma omp simd reduction(+ : result)
     for (int i = 0; i < a.size(); i++)
     {
         result += a[i] * b[i];
@@ -57,25 +60,28 @@ double dotProduct(const std::vector<double> &a, const std::vector<double> &b)
     return result;
 }
 // ans[i] = x[i] * y[i], for all i < n = x.size()
-void vectorMultiply(double a, const std::vector<double> &x, std::vector<double> &ans)
+void vectorMultiply(float a, const std::vector<float> &x, std::vector<float> &ans)
 {
+#pragma omp simd
     for (int i = 0; i < x.size(); i++)
     {
         ans[i] = a * x[i];
     }
 }
 // ans[i] = x[i] + y[i], for all i < n = x.size()
-void vectorAdd(const std::vector<double> &x, const std::vector<double> &y, std::vector<double> &ans)
+void vectorAdd(const std::vector<float> &x, const std::vector<float> &y, std::vector<float> &ans)
 {
+#pragma omp simd
     for (int i = 0; i < x.size(); i++)
     {
         ans[i] = x[i] + y[i];
     }
 }
 // sqrt(x_0^2 + x_1^2 + ... x_n^2)
-double vectorNorm(const std::vector<double> &x)
+float vectorNorm(const std::vector<float> &x)
 {
-    double sum = 0;
+    float sum = 0;
+#pragma omp simd reduction(+ : sum)
     for (auto num : x)
     {
         sum += num * num;
@@ -112,28 +118,31 @@ std::ostream &operator<<(std::ostream &os, std::vector<T> &vect)
 }
 
 // closed form solution
-double calculateExactSol(int i, int j)
+float calculateExactSol(int i, int j)
 {
     // return (np.e ** (-2 * (np.pi**2) * t)) * np.sin(np.pi*x * dx) * np.sin(np.pi*y * dy)
     return std::exp(-2 * (M_PI * M_PI) * data::T) * std::sin(M_PI * i * data::dx) * std::sin(M_PI * j * data::dy);
 }
 // L^2 error
-double computeError(const std::vector<double> &uNumeric)
+float computeError(const std::vector<float> &uNumeric)
 {
-    double ans = 0;
+    float ans = 0;
+#pragma omp parallel for reduction(+ : ans)
     for (int i = 0; i < data::numXSteps; i++)
     {
+        // #pragma omp simd
         for (int j = 0; j < data::numYSteps; j++)
         {
-            double diff = calculateExactSol(i, j) - uNumeric[i * data::numXSteps + j];
+            float diff = calculateExactSol(i, j) - uNumeric[i * data::numXSteps + j];
             ans += (diff * diff) * data::dx * data::dy;
         }
     }
     return std::sqrt(ans);
 }
 // t=0 initialization
-void initializeInitialGrid(std::vector<double> &uXyPrev)
+void initializeInitialGrid(std::vector<float> &uXyPrev)
 {
+#pragma omp parallel for
     for (int y = 0; y < data::numYSteps; y++)
     {
         for (int x = 0; x < data::numXSteps; x++)
@@ -150,25 +159,26 @@ void initializeInitialGrid(std::vector<double> &uXyPrev)
     }
 }
 
-void implicitBaseline()
+void implicitOmp()
 {
     // get start time
     auto t0 = std::chrono::steady_clock::now();
     // solution at time t-1
-    std::vector<double> uXyPrev(data::numXSteps * data::numYSteps, 0);
+    std::vector<float> uXyPrev(data::numXSteps * data::numYSteps, 0);
     // set t=0 grid based on boundary behavior
     initializeInitialGrid(uXyPrev);
     // for Conjugate Gradient algo (CG)
     int maxIters = data::Nx_int * data::Ny_int;
-    std::vector<double> rkPrev(data::Nx_int * data::Ny_int);
-    std::vector<double> rk(rkPrev.size(), 0), bkTimesPk(rkPrev.size()), intermediateAPk(rkPrev.size(), 0);
-    std::vector<double> xk(rkPrev.size(), 0), alphaKTimesPk(rkPrev.size(), 0), minusAlphakTimesInter(rkPrev.size(), 0);
-    std::vector<double> pk(rkPrev.size(), 0);
+    std::vector<float> rkPrev(data::Nx_int * data::Ny_int);
+    std::vector<float> rk(rkPrev.size(), 0), bkTimesPk(rkPrev.size()), intermediateAPk(rkPrev.size(), 0);
+    std::vector<float> xk(rkPrev.size(), 0), alphaKTimesPk(rkPrev.size(), 0), minusAlphakTimesInter(rkPrev.size(), 0);
+    std::vector<float> pk(rkPrev.size(), 0);
     // outer loop from t=1 -> T
     for (int m = 1; m < data::numTimeSteps; m++)
     {
         // split the grid into pieces for each thread to process independently, copying t=0 boundary behavior to rkPrev
         // which does not include boundary
+#pragma omp parallel for
         for (int i = 1; i < data::numYSteps - 1; i++)
         {
             for (int j = 1; j < data::numXSteps - 1; j++)
@@ -176,26 +186,26 @@ void implicitBaseline()
                 rkPrev[(i - 1) * data::Nx_int + (j - 1)] = uXyPrev[i * data::numXSteps + j];
             }
         }
+
         // initialize xk to 0
         std::fill(xk.begin(), xk.end(), 0);
         // pk starts at initial residual
         pk = rkPrev;
 
-        double error = 1;
+        float error = 1;
         int k = 0;
         // norm stays constant over entire t=m*dt
-        double rkPrevDot = dotProduct(rkPrev, rkPrev);
-        double bNorm = std::sqrt(rkPrevDot);
+        float rkPrevDot = dotProduct(rkPrev, rkPrev);
+        float bNorm = std::sqrt(rkPrevDot);
         // vect_a * vect_b == vect_a[i] * vect_b[i] for all i < vect_a.size() && vect_b.size()
         // solves Ax = b, A * U_m+1= U_m
         // Note: CG iteration count can be reduced significantly with a Jacobi (diagonal) preconditioner.
-        while (error > 1e-4 && k < maxIters)
+        while (error > 1e-3 && k < maxIters)
         {
             // intermediateAPk = A*pk
             applyAMatrix(pk, intermediateAPk);
-
             // alphaK = rkPrevDot / dot(pk, A*pk)
-            double alphaK = rkPrevDot / dotProduct(pk, intermediateAPk);
+            float alphaK = rkPrevDot / dotProduct(pk, intermediateAPk);
             // alphaKTimesPk = alphaK * pk
             vectorMultiply(alphaK, pk, alphaKTimesPk);
             // xk = (rkPrevDot * pk) / dot(pk, A*pk) + xk
@@ -204,11 +214,12 @@ void implicitBaseline()
             vectorMultiply(-alphaK, intermediateAPk, minusAlphakTimesInter);
             // rk = -(rkPrevDot * Apk) / dot(pk, Apk) + rkPrev
             vectorAdd(rkPrev, minusAlphakTimesInter, rk);
-            double rkDot = dotProduct(rk, rk);
-            double bk = rkDot / rkPrevDot;
+            float rkDot = dotProduct(rk, rk);
+            float bk = rkDot / rkPrevDot;
             vectorMultiply(bk, pk, bkTimesPk);
             // pk = rk + bk * pk
             vectorAdd(rk, bkTimesPk, pk);
+
             // swap O(1) and both vectors remain valid in state
             std::swap(rk, rkPrev);
             rkPrevDot = rkDot;
@@ -216,6 +227,7 @@ void implicitBaseline()
             error = std::sqrt(rkDot) / bNorm;
             k++;
         }
+
         // copies solution to UxYPrev for interioir points
         for (int i = 1; i < data::numYSteps - 1; i++)
         {
@@ -227,13 +239,13 @@ void implicitBaseline()
     }
     // end time
     auto t1 = std::chrono::steady_clock::now();
-    std::cout << "baseline Implicit Omp time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << std::endl;
-    std::cout << "baseline Implicit Omp L^2 error: " << computeError(uXyPrev) << std::endl;
+    std::cout << "Implicit Omp time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << std::endl;
+    std::cout << "Implicit Omp L^2 error: " << computeError(uXyPrev) << std::endl;
 }
 
 int main()
 {
-    implicitBaseline();
+    implicitOmp();
 
     return 0;
 }

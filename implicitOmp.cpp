@@ -186,6 +186,7 @@ void implicitOmp()
                 rkPrev[(i - 1) * data::Nx_int + (j - 1)] = uXyPrev[i * data::numXSteps + j];
             }
         }
+
         // initialize xk to 0
         std::fill(xk.begin(), xk.end(), 0);
         // pk starts at initial residual
@@ -196,10 +197,11 @@ void implicitOmp()
         // norm stays constant over entire t=m*dt
         double rkPrevDot = dotProduct(rkPrev, rkPrev);
         double bNorm = std::sqrt(rkPrevDot);
+
         // vect_a * vect_b == vect_a[i] * vect_b[i] for all i < vect_a.size() && vect_b.size()
         // solves Ax = b, A * U_m+1= U_m
         // Note: CG iteration count can be reduced significantly with a Jacobi (diagonal) preconditioner.
-        while (error > 1e-6 && k < maxIters)
+        while (error > 1e-3 && k < maxIters)
         {
             // intermediateAPk = A*pk
             applyAMatrix(pk, intermediateAPk);
@@ -235,10 +237,9 @@ void implicitOmp()
             }
         }
     }
-    // end time
     auto t1 = std::chrono::steady_clock::now();
-    std::cout << "baseline Implicit Omp time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << std::endl;
-    std::cout << "baseline Implicit Omp L^2 error: " << computeError(uXyPrev) << std::endl;
+    std::cout << "Implicit Omp time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << std::endl;
+    std::cout << "Implicit Omp L^2 error: " << computeError(uXyPrev) << std::endl;
 }
 
 int main()
